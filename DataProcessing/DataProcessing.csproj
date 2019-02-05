@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Tomáš Vogeltanz</Authors>
+    <Company>UTB ve Zlíně</Company>
+    <Copyright>Tomáš Vogeltanz</Copyright>
+    <RootNamespace>DataProcessing</RootNamespace>
+  </PropertyGroup>
+
+</Project>
