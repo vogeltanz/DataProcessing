@@ -6,6 +6,12 @@
     <Company>UTB ve Zlíně</Company>
     <Copyright>Tomáš Vogeltanz</Copyright>
     <RootNamespace>DataProcessing</RootNamespace>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <FileVersion>1.0.0.1</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath></OutputPath>
   </PropertyGroup>
 
 </Project>

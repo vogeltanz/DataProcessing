@@ -46,15 +46,12 @@ namespace DataProcessing
         /// <summary>
         /// vrací true, pokud byla načtena hlavička
         /// </summary>
-        public bool JeHlavickaNactena
+        public bool JeHlavickaNactena()
         {
-            get
-            {
-                if (this.Hlavicka != null || this.Hlavicka.Count > 0)
-                    return true;
-                else
-                    return false;
-            }
+            if (this.Hlavicka != null || this.Hlavicka.Count > 0)
+                return true;
+            else
+                return false;
         }
 
 
@@ -220,6 +217,11 @@ namespace DataProcessing
         }
 
 
+        /// <summary>
+        /// převádí seznam stringů na seznam Nullable doublů
+        /// </summary>
+        /// <param name="data">seznam stringů</param>
+        /// <returns>výstupní převedený seznam NullableDoublů</returns>
         public List<double?> PrevedSeznamDat(List<String> data)
         {
             List<double?> seznamNullableDoublu = new List<double?>();
@@ -271,6 +273,11 @@ namespace DataProcessing
         }
 
 
+        /// <summary>
+        /// uloží soubor do formátu CSV
+        /// </summary>
+        /// <param name="jmenoSouboru">jméno nebo cesta souboru</param>
+        /// <param name="zapisHlavicku">určuje, zda má dojít k zapsání hlavičky (jmen sloupců)</param>
         public void UlozCSV(string jmenoSouboru, bool zapisHlavicku = true)
         {
 
@@ -289,7 +296,7 @@ namespace DataProcessing
 
 
                 //pokud se má zapsat hlavička, a ta v objektu existuje, pokusí se do souboru tuto hlavičku zapsat
-                if (zapisHlavicku && this.JeHlavickaNactena && this.Hlavicka != null && this.Hlavicka.Count > 0)
+                if (zapisHlavicku && this.JeHlavickaNactena() && this.Hlavicka != null && this.Hlavicka.Count > 0)
                 {
                     try
                     {
@@ -474,7 +481,11 @@ namespace DataProcessing
             return null;
         }
 
-
+        /// <summary>
+        /// zamění desetinnou tečku za čárku, nebo desetinnou čárku za tečku, pokud je to potřeba
+        /// </summary>
+        /// <param name="hodnota">hodnota nebo text v datovém typu String</param>
+        /// <returns>řetězec se správně naformátovaným číslem, nebo původní string. Původní string vrátí pokud se nejedná o číslo, nebo jej nebylo třeba přeformátovat.</returns>
         private String ZmenDesetinnyOddelovacPokudJeNutne(String hodnota)
         {
 
@@ -515,6 +526,103 @@ namespace DataProcessing
             }
 
             return hodnotaModifikovana;
+        }
+
+
+        /// <summary>
+        /// Přidání řádku s využitím pomocné struktury CSV položka
+        /// </summary>
+        /// <param name="csvPolozky">položky zapsané jako struktury (v podstatě jen identifikátor a hodnota) v řadě za sebou</param>
+        public void PřidatŘádek(params CSVpolozka[] csvPolozky)
+        {
+
+            if (this.JeHlavickaNactena())
+            {
+                //projdeme všechny položky a přidáne je do seznamu seznamů všech přidaných položek
+                List<List<string>> pridaneSloupce = new List<List<string>>();
+                foreach (CSVpolozka csvPolozka in csvPolozky)
+                {
+                    List<string> sloupec = this.VratSloupecDat(csvPolozka.JmenoSloupce);
+                    if (sloupec != null)
+                        sloupec.Add(csvPolozka.HodnotaSloupce);
+                    else
+                        throw new Exception("Zadaná hodnota nemohla být přidána, protože sloupec neexistuje!");
+                    pridaneSloupce.Add(sloupec);
+                }
+
+
+                //projdeme všechny sloupce v datech a pridáme jejich reference do seznamu seznamů nepřidaných položek
+                List<List<string>> nepridaneSloupce = new List<List<string>>();
+                foreach (List<String> sloupec in this.Data)
+                {
+                    nepridaneSloupce.Add(sloupec);
+                }
+
+
+                //projdeme všechny reference na sloupce přidaných položek a porovnáváme referenci na sloupce nepřidaných položek
+                foreach (List<String> pridanySloupec in pridaneSloupce)
+                {
+                    for (int i = 0; i < nepridaneSloupce.Count; i++)
+                    {
+                        //pokud je reference stejná, smažeme ji v seznamu nepřidaných položek a vyskočíme ze smyčky for
+                        if (pridanySloupec == nepridaneSloupce[i])
+                        {
+                            nepridaneSloupce.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+
+
+                //přidáme prázdný string do sloupců, kde nebylo nic přidáno
+                foreach (List<string> seznamStringu in nepridaneSloupce)
+                {
+                    seznamStringu.Add(String.Empty);
+                }
+
+
+            }
+            else
+            {
+                throw new Exception("Metoda \"PřidatŘádek(params CSVpolozka[] csvPolozky)\" nemůže být použita, pokud nebyla vytvořena hlavička CSV souboru!");
+            }
+
+
+        }
+
+
+        /// <summary>
+        /// přidání řádku jen pomocí hodnot. Je nutné dodržet pořadí sloupců
+        /// </summary>
+        /// <param name="hodnotyString">řetězce s hodnotami, zapsané v pořadí, v jakém se mají vkládat do sloupců</param>
+        public void PřidatŘádek(params string[] hodnotyString)
+        {
+
+            //projdeme všechny položky a přidáne je do seznamu seznamů všech přidaných položek
+            List<List<string>> pridaneSloupce = new List<List<string>>();
+            for(int i = 0; i < hodnotyString.Length; i++)
+            {
+                //pokud je položka v pořadí, větším než počet sloupců,
+                if (i >= this.Data.Count)
+                {
+                    //vytvoří hodnoty s novým sloupce (pokud se nejdná o první sloupec, tak by bylo nutné ještě doplnit metodu pro vložení všech předchozích hodnot)
+                    this.Data.Add(new List<string>());
+                }
+                //přidá položku na konec sloupce
+                this.Data[i].Add(hodnotyString[i]);
+            }
+
+
+            //pokud bylo zadáno méně hodnot než je aktuálně sloupců
+            if (hodnotyString.Length < this.Data.Count)
+            {
+                //začne přidávat prázdný řetězec od 1. sloupce, který nebyl nastaven
+                for (int i = hodnotyString.Length; i < this.Data.Count; i++)
+                {
+                    this.Data[i].Add(String.Empty);
+                }
+            }
+
         }
 
 
