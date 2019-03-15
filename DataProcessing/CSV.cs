@@ -57,7 +57,7 @@ namespace DataProcessing
 
         /// <summary>
         /// data CSV souboru uložena jako seznam seznamů stringu.
-        /// (V podstatě se jedná o matici, vytvořenou ze dvou dynamických polí List)
+        /// (V podstatě se jedná o matici, vytvořenou ze dvou dynamických polí List - tzn. je možné si to představit jako tabulku s řádky a sloupci)
         /// </summary>
         public List<List<String>> Data
         {
@@ -132,8 +132,8 @@ namespace DataProcessing
         /// konstruktor, který provede základní nastavení dat objektu třídy
         /// </summary>
         /// <param name="separator">zvolený separator pro oddělení hodnot CSV souboru</param>
-        /// <param name="maximalniVelikostSouboru">Maximální velikost souboru, pokud je nastaveno oddělování (nastaveno defaultně na 15 MB).</param>
-        public CSV(Separator separator = Separator.středník, bool oddelSoubory = true, uint maximalniVelikostSouboru = 15000000)
+        /// <param name="maximalniVelikostSouboru">Maximální velikost souboru, pokud je nastaveno oddělování (nastaveno defaultně na 15 MB - pozn. číslo je zapsáno s oddělovačem číslic (tj. '_'), což je funkcionalita dostupná od C# 7.0).</param>
+        public CSV(Separator separator = Separator.středník, bool oddelSoubory = true, uint maximalniVelikostSouboru = 15_000_000)
         {
             this.Hlavicka = null;
             this.Data = null;
@@ -151,7 +151,7 @@ namespace DataProcessing
         /// načte CSV soubor dle jména nebo cesty
         /// </summary>
         /// <param name="jmenoSouboru">jméno nebo cesta k CSV souboru</param>
-        /// <param name="obsahujeHlavicku">>true, pokud soubor obsahuje hlavičku se jmény jednotlivých sloupců</param>
+        /// <param name="obsahujeHlavicku">true, pokud soubor obsahuje hlavičku se jmény jednotlivých sloupců</param>
         public void NactiCSV(string jmenoSouboru, bool obsahujeHlavicku = true)
         {
             //pokud CSV soubor obsahuje hlavičku, vytvoří seznam pro jednotlivé názvy hlaviček
@@ -192,20 +192,23 @@ namespace DataProcessing
                     //načte řádek ze souboru
                     řádekCSVSouboru = streamReader.ReadLine();
                     //rozdělí řádek na jednotlivé řetězce oddělené zadaným separátorem pomocí metody "Split"
+                    //<><>toto řešení není úplně dokonalé, protože v CSV souboru může být text, ve kterém se nachází daný separátor. Text se navíc může zadávat do uvozovek, což by mělo být také ošetřeno.
                     separovanýŘádekSouboru = řádekCSVSouboru.Split((char)this.Separator);
 
-
-                    //výsledky vloží do seznamu názvu sloupců
-                    for (int i = 0; i < separovanýŘádekSouboru.Length; i++)
+                    //pokud je na řádku jen jeden prvek a je prazdný (tzn. na řádku nic není), pokračuje v dalším cyklu od začátku while
+                    if (separovanýŘádekSouboru.Length == 1 && String.IsNullOrEmpty(separovanýŘádekSouboru[0]))
                     {
-                        //pokud ještě nebyl vytvořen seznam se stringy na tomto indexu, vytvoř jej
-                        //(v kódu nepředpokládáme, že by na různých řádcích bylo jiný počet hodnot, ale ta možnost tu je, takže to by bylo nutné ještě ošetřit a při přidávání nového seznamu během dalších řádků, doplnit předchozí chybějící hodnoty)
-                        if (i >= this.Data.Count)
-                            this.Data.Add(new List<string>());
-
-                        //přidá načtený a separovaný prvek do seznamu stringu
-                        this.Data[i].Add(separovanýŘádekSouboru[i]);
+                        continue;
                     }
+
+                    //pokud na řádku něco je, přidá se
+                    if (separovanýŘádekSouboru.Length > 0)
+                    {
+                        this.Data.Add(new List<string>());
+                    }
+
+                    //přidá načtený a separovaný prvek do seznamu stringů (tj. přidá řádek)
+                    this.PřidatŘádek(separovanýŘádekSouboru);
 
 
                 }
@@ -311,9 +314,7 @@ namespace DataProcessing
                     }
                     catch (Exception ex)
                     {
-                        //pokud dojde k chybě, zavře se soubor
-                        CSVfile.Close();
-                        //a následně se ještě musí uvolnit prostředky
+                        //pokud dojde k chybě, zavře se soubor a následně se ještě musí uvolnit prostředky
                         CSVfile.Dispose();
 
                         //zde vyhodíme vyjímku dále do vyšší úrovně programu, aby programátor používající knihovnu na ni mohl zareagovat vlastním způsobem
@@ -327,61 +328,58 @@ namespace DataProcessing
                 if (this.Data != null && this.Data.Count > 0)
                 {
                     uint cislo = 2; //číslo pro uvedení názvu souboru, pro případné rozdělení CSV souboru
-                    //nalezne nejdelší délku seznamu, protože musíme procházet položky dle řádku
-                    int nejdelsiDelkaSeznamu = this.VratNejdelsiDelkuSeznamu(this.Data);
-                    for (int j = 0; j < nejdelsiDelkaSeznamu; j++)
+
+                    for (int i = 0; i < this.Data.Count; i++)
                     {
-                        try
+                        if (this.Data[i] != null && this.Data[i].Count > 0)
                         {
-                            for (int i = 0; i < this.Data.Count; i++)
+
+                            try
                             {
-                                if (this.Data[i] != null && j < this.Data[i].Count)
+                                for (int j = 0; j < this.Data[i].Count; j++)
                                 {
                                     //pokud je to nutné, změní oddělovač desetinných čísel v řetězci
                                     string zmenenaHodnota = this.ZmenDesetinnyOddelovacPokudJeNutne(this.Data[i][j]);
-                                    //zapíše jednotlivé hlavičky, a pokud se jedná o poslední prvek, tak za něj nepřidá separátor
+                                    //zapíše jednotlivé sloupce
                                     CSVfile.Write($"{zmenenaHodnota}");
+
+                                    //posledni prvek na konci řádku je bez separátoru (středníku/čárky), za ostatními hodnotami se separátor dává
+                                    if (j != this.Data[i].Count - 1)
+                                        CSVfile.Write($"{(char)this.Separator}");
                                 }
-                                //posledni prvek na konci řádku je bez středníku
-                                if (i != this.Data.Count - 1)
-                                    CSVfile.Write($"{(char)this.Separator}");
-                            }
-                            CSVfile.WriteLine(String.Empty);
+                                //odřádkujeme
+                                CSVfile.WriteLine(String.Empty);
 
 
-                            //pokud má být CSV soubor po určitém množství zapsaných dat rozdělen
-                            if (this.OddelSoubory == true)
-                            {
-                                //zjistí aktuální délku souboru pomocí třídy FileInfo
-                                FileInfo fileInfo = new FileInfo(jmenoSouboruSPriponou);
-                                if (fileInfo.Length > this.MaximalniVelikostSouboru)
+                                //pokud má být CSV soubor po určitém množství zapsaných dat rozdělen
+                                if (this.OddelSoubory == true)
                                 {
-                                    //pokud byla překročena délka souboru, poskládá nové jméno souboru
-                                    jmenoSouboruSPriponou = jmenoSouboruSPriponou.Substring(0, jmenoSouboruSPriponou.Length - CSV.extension.Length) + cislo.ToString() + CSV.extension;
-                                    cislo += 1;
-                                    //uzavře se původní soubor a odstraní se všechny přidělené prostředky
-                                    CSVfile.Close();
-                                    CSVfile.Dispose();
-                                    //vytvoří se nový tok dat pro zápis
-                                    CSVfile = new System.IO.StreamWriter(jmenoSouboruSPriponou);
+                                    //zjistí aktuální délku souboru pomocí třídy FileInfo
+                                    FileInfo fileInfo = new FileInfo(jmenoSouboruSPriponou);
+                                    if (fileInfo.Length > this.MaximalniVelikostSouboru)
+                                    {
+                                        //pokud byla překročena délka souboru, poskládá nové jméno souboru
+                                        jmenoSouboruSPriponou = jmenoSouboruSPriponou.Substring(0, jmenoSouboruSPriponou.Length - CSV.extension.Length) + cislo.ToString() + CSV.extension;
+                                        cislo += 1;
+                                        //uzavře se původní soubor a odstraní se všechny přidělené prostředky
+                                        CSVfile.Dispose();
+                                        //vytvoří se nový tok dat pro zápis
+                                        CSVfile = new System.IO.StreamWriter(jmenoSouboruSPriponou);
+                                    }
                                 }
                             }
+                            catch (Exception ex)
+                            {
+                                //pokud dojde k chybě, zavře se soubor a následně se ještě musí uvolnit prostředky
+                                CSVfile.Dispose();
 
-                        }
-                        catch (Exception ex)
-                        {
-                            //pokud dojde k chybě, zavře se soubor
-                            CSVfile.Close();
-                            //a následně se ještě musí uvolnit prostředky
-                            CSVfile.Dispose();
-
-                            //zde vyhodíme vyjímku dále do vyšší úrovně programu, aby programátor používající knihovnu na ni mohl zareagovat vlastním způsobem
-                            throw ex;
+                                //zde vyhodíme vyjímku dále do vyšší úrovně programu, aby programátor používající knihovnu na ni mohl zareagovat vlastním způsobem
+                                throw ex;
+                            }
                         }
                     }
                 }
 
-                CSVfile.Close();
                 CSVfile.Dispose();
             }
         }
@@ -465,22 +463,6 @@ namespace DataProcessing
             return indexSloupce;
         }
 
-
-        /// <summary>
-        /// Vrátí seznam sloupce dat dle zadaného názvu v hlavičce
-        /// </summary>
-        /// <param name="jmenoSloupce">jméno sloupce v hlavičce CSV souboru</param>
-        /// <returns>seznam stringů s daty daného sloupce, pokud nebyl sloupec nalezen, vrací null</returns>
-        public List<String> VratSloupecDat(string jmenoSloupce)
-        {
-            int indexSloupce = this.NajdiIndexSloupceHlavicky(jmenoSloupce);
-            if (indexSloupce >= 0 && indexSloupce < this.Data.Count)
-            {
-                return this.Data[indexSloupce];
-            }
-            return null;
-        }
-
         /// <summary>
         /// zamění desetinnou tečku za čárku, nebo desetinnou čárku za tečku, pokud je to potřeba
         /// </summary>
@@ -530,7 +512,7 @@ namespace DataProcessing
 
 
         /// <summary>
-        /// Přidání řádku s využitím pomocné struktury CSV položka
+        /// <><>Přidání řádku s využitím pomocné struktury CSV položka
         /// </summary>
         /// <param name="csvPolozky">položky zapsané jako struktury (v podstatě jen identifikátor a hodnota) v řadě za sebou</param>
         public void PřidatŘádek(params CSVpolozka[] csvPolozky)
@@ -590,26 +572,33 @@ namespace DataProcessing
 
         }
 
+        /// <summary>
+        /// Vrátí sloupec dat dle zadaného jména sloupce (vyhledá název v hlavičce)
+        /// </summary>
+        /// <param name="jmenoSloupce">jméno sloupce, který chceme vrátit</param>
+        /// <returns></returns>
+        private List<string> VratSloupecDat(string jmenoSloupce)
+        {
+            throw new NotImplementedException();
+        }
+
 
         /// <summary>
-        /// přidání řádku jen pomocí hodnot. Je nutné dodržet pořadí sloupců
+        /// Přidání řádku jen pomocí hodnot. Je nutné dodržet pořadí sloupců
         /// </summary>
-        /// <param name="hodnotyString">řetězce s hodnotami, zapsané v pořadí, v jakém se mají vkládat do sloupců</param>
+        /// <param name="hodnotyString">řetězce s hodnotami, zapsané ve stejném pořadí jako názvy sloupců v hlavičce</param>
         public void PřidatŘádek(params string[] hodnotyString)
         {
 
-            //projdeme všechny položky a přidáne je do seznamu seznamů všech přidaných položek
-            List<List<string>> pridaneSloupce = new List<List<string>>();
-            for(int i = 0; i < hodnotyString.Length; i++)
+            if (hodnotyString.Length > 0)
+                this.Data.Add(new List<string>());
+
+            int posledniIndex = this.Data.Count - 1;
+            //projdeme všechny položky a přidáme je do seznamu na posledním indexu
+            for (int i = 0; i < hodnotyString.Length; i++)
             {
-                //pokud je položka v pořadí, větším než počet sloupců,
-                if (i >= this.Data.Count)
-                {
-                    //vytvoří hodnoty s novým sloupce (pokud se nejdná o první sloupec, tak by bylo nutné ještě doplnit metodu pro vložení všech předchozích hodnot)
-                    this.Data.Add(new List<string>());
-                }
-                //přidá položku na konec sloupce
-                this.Data[i].Add(hodnotyString[i]);
+                //přidá položku na poslední řádek
+                this.Data[posledniIndex].Add(hodnotyString[i]);
             }
 
 
@@ -619,7 +608,7 @@ namespace DataProcessing
                 //začne přidávat prázdný řetězec od 1. sloupce, který nebyl nastaven
                 for (int i = hodnotyString.Length; i < this.Data.Count; i++)
                 {
-                    this.Data[i].Add(String.Empty);
+                    this.Data[posledniIndex].Add(String.Empty);
                 }
             }
 

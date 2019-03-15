@@ -6,8 +6,9 @@
     <Company>UTB ve Zlíně</Company>
     <Copyright>Tomáš Vogeltanz</Copyright>
     <RootNamespace>DataProcessing</RootNamespace>
-    <AssemblyVersion>1.0.0.1</AssemblyVersion>
-    <FileVersion>1.0.0.1</FileVersion>
+    <AssemblyVersion>1.1.9999.0</AssemblyVersion>
+    <FileVersion>1.1.9999.0</FileVersion>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
