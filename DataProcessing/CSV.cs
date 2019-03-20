@@ -512,7 +512,7 @@ namespace DataProcessing
 
 
         /// <summary>
-        /// <><>Přidání řádku s využitím pomocné struktury CSV položka
+        /// Přidání řádku s využitím pomocné struktury CSV položka
         /// </summary>
         /// <param name="csvPolozky">položky zapsané jako struktury (v podstatě jen identifikátor a hodnota) v řadě za sebou</param>
         public void PřidatŘádek(params CSVpolozka[] csvPolozky)
@@ -520,66 +520,44 @@ namespace DataProcessing
 
             if (this.JeHlavickaNactena())
             {
-                //projdeme všechny položky a přidáne je do seznamu seznamů všech přidaných položek
-                List<List<string>> pridaneSloupce = new List<List<string>>();
+                //projdeme všechny položky a přidáme je do seřazeného seznamu (SortedList) všech přidaných položek
+                //seznam se seřazuje podle klíče (v našem případě index sloupce). Obsahem je poté samotný string s hodnotou
+                SortedList<int, string> pridaneSloupce = new SortedList<int, string>();
                 foreach (CSVpolozka csvPolozka in csvPolozky)
                 {
-                    List<string> sloupec = this.VratSloupecDat(csvPolozka.JmenoSloupce);
-                    if (sloupec != null)
-                        sloupec.Add(csvPolozka.HodnotaSloupce);
+                    int indexSloupce = this.NajdiIndexSloupceHlavicky(csvPolozka.JmenoSloupce);
+                    if (indexSloupce >= 0)
+                        pridaneSloupce.Add(indexSloupce, csvPolozka.HodnotaSloupce);
                     else
                         throw new Exception("Zadaná hodnota nemohla být přidána, protože sloupec neexistuje!");
-                    pridaneSloupce.Add(sloupec);
                 }
 
+                if (pridaneSloupce.Count > 0)
+                    this.Data.Add(new List<string>());
+                int indexPosledni = this.Data.Count - 1;
 
-                //projdeme všechny sloupce v datech a pridáme jejich reference do seznamu seznamů nepřidaných položek
-                List<List<string>> nepridaneSloupce = new List<List<string>>();
-                foreach (List<String> sloupec in this.Data)
+                for (int i = 0, j = 0; i < pridaneSloupce.Count; ++i, ++j)
                 {
-                    nepridaneSloupce.Add(sloupec);
-                }
-
-
-                //projdeme všechny reference na sloupce přidaných položek a porovnáváme referenci na sloupce nepřidaných položek
-                foreach (List<String> pridanySloupec in pridaneSloupce)
-                {
-                    for (int i = 0; i < nepridaneSloupce.Count; i++)
+                    //zatímco jsme ještě nedošli na index správného sloupce...
+                    while (j < pridaneSloupce.Keys[i])
                     {
-                        //pokud je reference stejná, smažeme ji v seznamu nepřidaných položek a vyskočíme ze smyčky for
-                        if (pridanySloupec == nepridaneSloupce[i])
-                        {
-                            nepridaneSloupce.RemoveAt(i);
-                            break;
-                        }
+                        //...přidáváme prázdný string do sloupců, které nebyly specifikovány
+                        this.Data[indexPosledni].Add(String.Empty);
+                        ++j;
+                    }
+
+                    //pokud je klíč stejný jako současný index, tak přidá hodnotu/text na konec seznamu
+                    if (j == pridaneSloupce.Keys[i])
+                    {
+                        this.Data[indexPosledni].Add(pridaneSloupce[i]);
                     }
                 }
-
-
-                //přidáme prázdný string do sloupců, kde nebylo nic přidáno
-                foreach (List<string> seznamStringu in nepridaneSloupce)
-                {
-                    seznamStringu.Add(String.Empty);
-                }
-
-
             }
             else
             {
                 throw new Exception("Metoda \"PřidatŘádek(params CSVpolozka[] csvPolozky)\" nemůže být použita, pokud nebyla vytvořena hlavička CSV souboru!");
             }
 
-
-        }
-
-        /// <summary>
-        /// Vrátí sloupec dat dle zadaného jména sloupce (vyhledá název v hlavičce)
-        /// </summary>
-        /// <param name="jmenoSloupce">jméno sloupce, který chceme vrátit</param>
-        /// <returns></returns>
-        private List<string> VratSloupecDat(string jmenoSloupce)
-        {
-            throw new NotImplementedException();
         }
 
 
