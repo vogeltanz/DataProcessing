@@ -204,12 +204,9 @@ namespace DataProcessing
                     //pokud na řádku něco je, přidá se
                     if (separovanýŘádekSouboru.Length > 0)
                     {
-                        this.Data.Add(new List<string>());
+                        //přidá načtený a separovaný prvek do seznamu stringů (tj. přidá řádek)
+                        this.PřidatŘádek(separovanýŘádekSouboru);
                     }
-
-                    //přidá načtený a separovaný prvek do seznamu stringů (tj. přidá řádek)
-                    this.PřidatŘádek(separovanýŘádekSouboru);
-
 
                 }
 
