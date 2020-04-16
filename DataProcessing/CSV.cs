@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;
 
 namespace DataProcessing
 {
@@ -164,7 +165,7 @@ namespace DataProcessing
             //pokud třída implementuje interface "IDisposable", pak to znamená, že si uchovává prostředky (tzv. "unmanaged resources" - nespravované/neřízené/nezabezbečené zdroje), které je nutné ručně odstranit voláním metody Dispose().
             //Nicméně vzhledem k tomu, že v kódu se mohou objevit výjimky (Exceptions), museli bychom volání Dispose zabezpečit pro každý případ (viz metoda "UlozCSV" níže).
             //práci si můžeme ulehčit použitím příkazu using
-            using (StreamReader streamReader = File.OpenText(jmenoSouboru))
+            using (StreamReader streamReader = new StreamReader(jmenoSouboru, Encoding.Default))
             {
                 string řádekCSVSouboru;
                 string[] separovanýŘádekSouboru;
@@ -292,7 +293,8 @@ namespace DataProcessing
                 //vytvoření toku dat pro zápis do souboru (vytvoří soubor a otevře ho pro zápis)
                 //stejně jako u StreamReaderu i StreamWriter implementuje interface "IDisposable"
                 //zde ale musíme volat metodu Dispose() ručně, protože chceme separovat soubory, tzn. že musíme nové soubory v průběhu kódu vytvářet, což by při použití příkazu "using" nebylo možné
-                StreamWriter CSVfile = new System.IO.StreamWriter(jmenoSouboruSPriponou);
+                Stream stream = new FileStream(jmenoSouboruSPriponou, FileMode.Create);
+                StreamWriter CSVfile = new System.IO.StreamWriter(stream, Encoding.Default);
 
 
                 //pokud se má zapsat hlavička, a ta v objektu existuje, pokusí se do souboru tuto hlavičku zapsat
@@ -313,6 +315,7 @@ namespace DataProcessing
                     {
                         //pokud dojde k chybě, zavře se soubor a následně se ještě musí uvolnit prostředky
                         CSVfile.Dispose();
+                        stream.Dispose();
 
                         //zde vyhodíme vyjímku dále do vyšší úrovně programu, aby programátor používající knihovnu na ni mohl zareagovat vlastním způsobem
                         throw ex;
@@ -360,8 +363,10 @@ namespace DataProcessing
                                         cislo += 1;
                                         //uzavře se původní soubor a odstraní se všechny přidělené prostředky
                                         CSVfile.Dispose();
+                                        stream.Dispose();
                                         //vytvoří se nový tok dat pro zápis
-                                        CSVfile = new System.IO.StreamWriter(jmenoSouboruSPriponou);
+                                        stream = new FileStream(jmenoSouboruSPriponou, FileMode.Create);
+                                        CSVfile = new System.IO.StreamWriter(stream, Encoding.Default);
                                     }
                                 }
                             }
@@ -369,6 +374,7 @@ namespace DataProcessing
                             {
                                 //pokud dojde k chybě, zavře se soubor a následně se ještě musí uvolnit prostředky
                                 CSVfile.Dispose();
+                                stream.Dispose();
 
                                 //zde vyhodíme vyjímku dále do vyšší úrovně programu, aby programátor používající knihovnu na ni mohl zareagovat vlastním způsobem
                                 throw ex;
@@ -378,6 +384,7 @@ namespace DataProcessing
                 }
 
                 CSVfile.Dispose();
+                stream.Dispose();
             }
         }
 
